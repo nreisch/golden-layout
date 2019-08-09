@@ -92,6 +92,13 @@ export default class LayoutManager extends EventEmitter {
             'stack': Stack,
             'component': Component
         };
+
+        this.cachedNodes = {
+            childIds : [],
+            nodes: [],
+            elements: [],
+            activeContent: [],
+        };
     }
 
     /**
@@ -463,7 +470,8 @@ export default class LayoutManager extends EventEmitter {
                 child = child.parent;
             }
 
-            parent.addId(parentId);
+            parent.config.id = parentId;	
+            
             if (isNaN(indexInParent)) {
                 indexInParent = indexOf(child, parent.contentItems);
             }

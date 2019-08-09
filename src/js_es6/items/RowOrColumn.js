@@ -195,6 +195,10 @@ export default class RowOrColumn extends AbstractContentItem {
 
         if (this.contentItems.length === 1 && this.config.isClosable === true) {
             childItem = this.contentItems[0];
+            // Loop through elements that were children and save them
+            for(let i = 0; i < childItem.element.length; i++) {
+				this.layoutManager.cachedNodes.elements.push(childItem.element[i]);
+			}
             this.contentItems = [];
             this.parent.replaceChild(this, childItem, true);
             this._validateDocking(this.parent);

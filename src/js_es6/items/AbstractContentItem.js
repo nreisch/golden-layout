@@ -11,7 +11,8 @@ import itemDefaultConfig from '../config/ItemDefaultConfig'
 import {
     fnBind,
     animFrame,
-    indexOf
+    indexOf,
+    getUniqueId
 } from '../utils/utils'
 
 /**
@@ -235,6 +236,13 @@ export default class AbstractContentItem extends EventEmitter {
             oldChild._$destroy();
         }
 
+        // Give the new Child a unique id we can reference later, unless it already contains one contains in phantomIds
+		newChild.config.id = getUniqueId();
+
+		// Store the replaced node (oldChild), and the IDs of the child nodes of oldChild to be able to search for them in content tree during execution of popIn()
+		this.layoutManager.cachedNodes.nodes.push(oldChild);	
+		this.layoutManager.cachedNodes.childIds.push(newChild.config.id);
+
         /*
          * Wire the new contentItem into the tree
          */
@@ -246,6 +254,9 @@ export default class AbstractContentItem extends EventEmitter {
          */
         if (this.isStack) {
             this.header.tabs[index].contentItem = newChild;
+            // So now when we reinstate a node on popIn
+			// If the shared contentItem in popIn is the same as the one in the activeContent we update it
+			this.layoutManager.cachedNodes.activeContent[this.layoutManager.cachedNodes.activeContent.length] = this.header.tabs[ index ].contentItem;
         }
 
         //TODO This doesn't update the config... refactor to leave item nodes untouched after creation

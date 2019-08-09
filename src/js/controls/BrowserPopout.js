@@ -76,7 +76,7 @@ lm.utils.copy( lm.controls.BrowserPopout.prototype, {
 			parentItem,
 			index = this._indexInParent;
 			let content;
-			let contentId;
+			let childId;
 			let cachedNodes = this._layoutManager.cachedNodes;
 			let indexSplice = 0;
 
@@ -105,14 +105,14 @@ lm.utils.copy( lm.controls.BrowserPopout.prototype, {
 
 					if(this._parentId === this._layoutManager.cachedNodes.nodes[i].config.id) {
 						content = this._layoutManager.cachedNodes.nodes[i];
-						contentId = this._layoutManager.cachedNodes.childIds[i];
+						childId = this._layoutManager.cachedNodes.childIds[i];
 						indexSplice = i;
 						
 					}
 				}
 				
 				// Now we have the contentItem so traverse the tree to find the parent that shares the same contentItem, we use the id to do this as opposed to keep the reference, and then later wiring them together
-				let mainTreeElem = this.findContentItemParam(this._layoutManager.root, contentId, "id"); // This will return a reference to the contentItem from the main tree
+				let mainTreeElem = this.findContentItemParam(this._layoutManager.root, childId, "id"); // This will return a reference to the contentItem from the main tree
 				let mainTreeItem = null;
 				// If mainTreeElem returns then there is a valid shared content item, otherwise mainTreeItem will stay at node and we add to root
 				if(mainTreeElem) {
@@ -126,7 +126,7 @@ lm.utils.copy( lm.controls.BrowserPopout.prototype, {
 				let indexOfSharedContentItem;
 				for(let i = 0; i < mainTreeItem.contentItems.length; i++) {
 					// Check to see if they share the same child, if they do then we wire the component from the cachedNodes into the main tree
-					if(mainTreeItem.contentItems[i].config.id === contentId) {
+					if(mainTreeItem.contentItems[i].config.id === childId) {
 
 						// Change the reference of the shared child to have its parent point to our content Item
 						mainTreeItem.contentItems[i].parent = content;

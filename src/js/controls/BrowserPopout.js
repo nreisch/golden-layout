@@ -75,6 +75,10 @@ lm.utils.copy( lm.controls.BrowserPopout.prototype, {
 		var childConfig,
 			parentItem,
 			index = this._indexInParent;
+			let content;
+			let contentId;
+			let cachedNodes = this._layoutManager.cachedNodes;
+			let indexSplice = 0;
 
 		if( this._parentId ) {
 
@@ -94,18 +98,114 @@ lm.utils.copy( lm.controls.BrowserPopout.prototype, {
 			 * Fallback if parentItem is not available. Either add it to the topmost
 			 * item or make it the topmost item if the layout is empty
 			 */
-			if( !parentItem ) {
-				if( this._layoutManager.root.contentItems.length > 0 ) {
-					parentItem = this._layoutManager.root.contentItems[ 0 ];
-				} else {
-					parentItem = this._layoutManager.root;
+
+			// If it turns out that the id is held in the cachedNodes array, then our parent is available to use in this array we just have to wire it back into the contentItem;
+			if(!parentItem) {
+				for(let i = 0; i < this._layoutManager.cachedNodes.nodes.length; i++) {
+
+					if(this._parentId === this._layoutManager.cachedNodes.nodes[i].config.id) {
+						content = this._layoutManager.cachedNodes.nodes[i];
+						contentId = this._layoutManager.cachedNodes.childIds[i];
+						indexSplice = i;
+						
+					}
 				}
-				index = 0;
+				
+				// Now we have the contentItem so traverse the tree to find the parent that shares the same contentItem, we use the id to do this as opposed to keep the reference, and then later wiring them together
+				let mainTreeElem = this.findContentItemParam(this._layoutManager.root, contentId, "id"); // This will return a reference to the contentItem from the main tree
+				let mainTreeItem = null;
+				// If mainTreeElem returns then there is a valid shared content item, otherwise mainTreeItem will stay at node and we add to root
+				if(mainTreeElem) {
+					mainTreeItem = mainTreeElem.parent;
+				}
+
+				let itemToReplace;
+				if(mainTreeItem) {
+					itemToReplace = this.matchChildNodes(mainTreeItem.element[0], cachedNodes.elements[cachedNodes.elements.length - 1]);
+				
+				let indexOfSharedContentItem;
+				for(let i = 0; i < mainTreeItem.contentItems.length; i++) {
+					// Check to see if they share the same child, if they do then we wire the component from the cachedNodes into the main tree
+					if(mainTreeItem.contentItems[i].config.id === contentId) {
+
+						// Change the reference of the shared child to have its parent point to our content Item
+						mainTreeItem.contentItems[i].parent = content;
+
+						// Let the content hold a reference to the now restored childNode
+						content.contentItems[content.contentItems.length] = mainTreeItem.contentItems[i];
+
+						indexOfSharedContentItem = i;
+
+						// Content Item was set on replaceChild, now we are reinstating another component, so if the current active tab is the previous one that was made on replaceChild we now update it to reflect the one we are reinstating -- so we reinstate that contentItem before we wire it back into the content Items
+						if(mainTreeItem.isStack)
+							if(mainTreeItem.header.tabs[indexOfSharedContentItem].contentItem == mainTreeItem.contentItems[indexOfSharedContentItem])
+								mainTreeItem.header.tabs[indexOfSharedContentItem].contentItem = content;
+	
+						// Then wire it back into the tree
+						mainTreeItem.contentItems[i] = content;
+						content.parent = mainTreeItem;
+
+						
+					}
+				}
+	
+				parentItem = content;
+				
+				// Replacing the child Nodes with the parentItem, this is the component that was stored in our cachedNodes we want to reinstate
+				itemToReplace.parentNode.replaceChild(parentItem.element[0], itemToReplace);
+				// Now that we've reinstated the parentItem we append to it the common child element that we have access to in our cachedNodes element
+
+				// This same element we are appending is the element we just replaced above
+				parentItem.element[0].append(this._layoutManager.cachedNodes.elements[this._layoutManager.cachedNodes.elements.length - 1]);
+
+				} else {
+					parentItem = this._layoutManager.root.contentItems[ 0 ];
+
+				}
 			}
 		}
 
+		// Remove from the cachedNodes
+		this._layoutManager.cachedNodes.nodes.splice(indexSplice, 1);
+		this._layoutManager.cachedNodes.childIds.splice(indexSplice, 1)
+		this._layoutManager.cachedNodes.elements.splice(cachedNodes.elements.length-1, 1);
+
 		parentItem.addChild( childConfig, this._indexInParent );
+
+	
 		this.close();
+	},
+
+	/**
+	 * Want to compare the element, and if not equal traverse further down to childNodes
+	 */
+	matchChildNodes: function(rootElement, element) {
+		if(rootElement === element) {
+			return rootElement
+		}
+		for(let i = 0; i < rootElement.childNodes.length; i++) {
+			rootElement = this.matchChildNodes(rootElement.childNodes[i], element);
+			if(rootElement === element) {
+				return rootElement;
+			}
+		}
+	
+		return rootElement.parentNode;
+	},
+
+	findContentItemParam: function(root, contentItemParam, param) {
+		if(root.config[param] === contentItemParam) {
+			return root;
+		}
+		for(let i = 0; i < root.contentItems.length; i++) {
+			root = this.findContentItemParam(root.contentItems[i], contentItemParam, param);
+			if(root.config[param] == contentItemParam) {
+				return root;
+			}
+		}
+		// If it's not the contentItem and doesn't have anymore contentItems, traverses back up
+		return root.parent;
+
 	},
 
 	/**

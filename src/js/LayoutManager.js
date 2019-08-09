@@ -56,6 +56,13 @@ lm.LayoutManager = function( config, container ) {
 		'stack': lm.items.Stack,
 		'component': lm.items.Component
 	};
+
+	this.cachedNodes = {
+		childIds : [],
+		nodes: [],
+		elements: [],
+		activeContent: [],
+	};
 };
 
 /**
@@ -431,7 +438,8 @@ lm.utils.copy( lm.LayoutManager.prototype, {
 				child = child.parent;
 			}
 
-			parent.addId( parentId );
+			parent.config.id = parentId;	
+			
 			if( isNaN( indexInParent ) ) {
 				indexInParent = lm.utils.indexOf( child, parent.contentItems );
 			}
